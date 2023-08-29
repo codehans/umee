@@ -42,6 +42,12 @@ service Query {
     option (google.api.http).get = "/umee/leverage/v1/account_balances";
   }
 
+  // Accounts queries an account's current supply, collateral, and borrow positions.
+  rpc Accounts(QueryAccounts)
+      returns (QueryAccountsResponse) {
+    option (google.api.http).get = "/umee/leverage/v1/accounts";
+  }
+
   // AccountSummary queries USD values representing an account's total positions and borrowing limits. It requires oracle prices to return successfully.
   rpc AccountSummary(QueryAccountSummary)
       returns (QueryAccountSummaryResponse) {
@@ -246,6 +252,8 @@ message QueryAccountBalancesResponse {
   ];
 }
 
+
+
 // QueryAccountSummary defines the request structure for the AccountSummary gRPC service handler.
 message QueryAccountSummary {
   string address = 1;
@@ -290,6 +298,30 @@ message QueryAccountSummaryResponse {
     (gogoproto.nullable)   = true
   ];
 }
+
+// QueryAccounts defines the request structure for the AccountBalances gRPC service handler.
+message QueryAccounts {}
+
+message Account {
+  string address = 1;
+
+  QueryAccountBalancesResponse balances = 2 [
+    (gogoproto.nullable)     = false
+  ];
+
+  QueryAccountSummaryResponse summary = 3 [
+    (gogoproto.nullable)     = false
+  ];
+}
+
+
+// QueryAccountBalancesResponse defines the response structure for the Accounts gRPC service handler.
+message QueryAccountsResponse {
+  repeated Account accounts = 1 [
+    (gogoproto.nullable)     = false
+  ];
+}
+
 
 // QueryLiquidationTargets defines the request structure for the LiquidationTargets gRPC service handler.
 message QueryLiquidationTargets {}

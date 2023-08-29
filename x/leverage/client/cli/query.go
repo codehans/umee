@@ -33,6 +33,7 @@ func GetQueryCmd() *cobra.Command {
 		QuerySpecialAssets(),
 		QueryMarketSummary(),
 		QueryAccountBalances(),
+		QueryAccountsBalances(),
 		QueryAccountSummary(),
 		QueryLiquidationTargets(),
 		QueryBadDebts(),
@@ -178,7 +179,30 @@ func QueryAccountBalances() *cobra.Command {
 	return cmd
 }
 
-// QueryAccountSummary creates a Cobra command to query for USD
+func QueryAccountsBalances() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "accounts-balances",
+		Args:  cobra.ExactArgs(0),
+		Short: "Query for the total supplied, collateral, and borrowed tokens for all accounts",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			queryClient := types.NewQueryClient(clientCtx)
+			req := &types.QueryAccounts{}
+			resp, err := queryClient.Accounts(cmd.Context(), req)
+			return cli.PrintOrErr(resp, err, clientCtx)
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+
+	return cmd
+}
+
+// GetCmdQueryAccountSummary creates a Cobra command to query for USD
 // values representing an account's positions and borrowing limits.
 func QueryAccountSummary() *cobra.Command {
 	cmd := &cobra.Command{

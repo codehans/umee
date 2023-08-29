@@ -287,6 +287,27 @@ func (q Querier) AccountSummary(
 	return resp, nil
 }
 
+func (q Querier) Accounts(
+	goCtx context.Context,
+	req *types.QueryAccounts,
+) (*types.QueryAccountsResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty request")
+	}
+
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	res, err := q.Keeper.GetAccounts(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.QueryAccountsResponse{
+		Accounts: res,
+	}, nil
+}
+
 func (q Querier) LiquidationTargets(
 	goCtx context.Context,
 	req *types.QueryLiquidationTargets,
