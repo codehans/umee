@@ -89,6 +89,93 @@ func (k Keeper) GetBorrowerCollateral(ctx sdk.Context, borrowerAddr sdk.AccAddre
 	return totalCollateral
 }
 
+// GetBorrowers returns a list of borrowers
+func (k Keeper) GetAccounts(ctx sdk.Context) ([]types.Account, error) {
+	prefix := types.KeyPrefixAdjustedBorrow
+	result := []types.Account{}
+	checkedAddrs := map[string]struct{}{}
+
+	iterator := func(key, _ []byte) error {
+		borrowerAddr := types.AddressFromKey(key, prefix)
+
+		// if the address is already checked, do not check again
+		if _, ok := checkedAddrs[borrowerAddr.String()]; ok {
+			return nil
+		}
+
+		// get borrower's total borrowed
+		borrowed := k.GetBorrowerBorrows(ctx, borrowerAddr)
+
+		// get borrower's total collateral
+		collateral := k.GetBorrowerCollateral(ctx, borrowerAddr)
+
+		supplied, err := k.GetAllSupplied(ctx, borrowerAddr)
+		if err != nil {
+			return err
+		}
+
+		// use oracle helper functions to find total borrowed value in USD
+		// skips denoms without prices
+		borrowedValue, err := k.VisibleTokenValue(ctx, borrowed, types.PriceModeSpot)
+		if err != nil {
+			return err
+		}
+
+		// supplied value always uses spot prices, and skips supplied assets that are missing prices
+		suppliedValue, err := k.VisibleTokenValue(ctx, supplied, types.PriceModeSpot)
+		if err != nil {
+			return err
+		}
+
+		// collateral value always uses spot prices, and this line skips assets that are missing prices
+		collateralValue, err := k.VisibleCollateralValue(ctx, collateral, types.PriceModeSpot)
+		if err != nil {
+			return err
+		}
+
+		// borrow limit shown here as it is used in leverage logic:
+		// using the lower of spot or historic prices for each collateral token
+		// skips collateral tokens with missing oracle prices
+		borrowLimit, err := k.VisibleBorrowLimit(ctx, collateral)
+		if err != nil {
+			return err
+		}
+
+		summary := types.QueryAccountSummaryResponse{
+			SuppliedValue:   suppliedValue,
+			CollateralValue: collateralValue,
+			BorrowedValue:   borrowedValue,
+			BorrowLimit:     borrowLimit,
+		}
+
+		if err == nil && !borrowedValue.IsZero() {
+			checkedAddrs[borrowerAddr.String()] = struct{}{}
+
+			result = append(result, types.Account{
+				Address: borrowerAddr.String(),
+				Balances: types.QueryAccountBalancesResponse{
+					Supplied:   supplied,
+					Collateral: collateral,
+					Borrowed:   borrowed,
+				},
+				Summary: summary,
+			})
+		}
+		// Non-price errors will cause the query itself to fail
+		if nonOracleError(err) {
+			return err
+		}
+
+		return nil
+	}
+
+	if err := k.iterate(ctx, prefix, iterator); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 // GetEligibleLiquidationTargets returns a list of borrower addresses eligible for liquidation.
 func (k Keeper) GetEligibleLiquidationTargets(ctx sdk.Context) ([]sdk.AccAddress, error) {
 	prefix := types.KeyPrefixAdjustedBorrow
