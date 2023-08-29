@@ -32,6 +32,7 @@ func GetQueryCmd() *cobra.Command {
 		GetCmdQueryRegisteredTokens(),
 		GetCmdQueryMarketSummary(),
 		GetCmdQueryAccountBalances(),
+		GetCmdQueryAccountsBalances(),
 		GetCmdQueryAccountSummary(),
 		GetCmdQueryLiquidationTargets(),
 		GetCmdQueryBadDebts(),
@@ -140,6 +141,31 @@ func GetCmdQueryAccountBalances() *cobra.Command {
 				Address: args[0],
 			}
 			resp, err := queryClient.AccountBalances(cmd.Context(), req)
+			return cli.PrintOrErr(resp, err, clientCtx)
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+
+	return cmd
+}
+
+// GetCmdQueryAccountBalances creates a Cobra command to query for the
+// supply, collateral, and borrow positions of an account.
+func GetCmdQueryAccountsBalances() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "accounts-balances",
+		Args:  cobra.ExactArgs(0),
+		Short: "Query for the total supplied, collateral, and borrowed tokens for all accounts",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			queryClient := types.NewQueryClient(clientCtx)
+			req := &types.QueryAccounts{}
+			resp, err := queryClient.Accounts(cmd.Context(), req)
 			return cli.PrintOrErr(resp, err, clientCtx)
 		},
 	}
