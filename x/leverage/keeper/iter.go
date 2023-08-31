@@ -164,11 +164,17 @@ func (k Keeper) GetAccounts(ctx sdk.Context) ([]types.Account, error) {
 			return err
 		}
 
+		liquidationThreshold, err := k.CalculateLiquidationThreshold(ctx, collateral)
+		if err != nil {
+			return err
+		}
+
 		summary := types.QueryAccountSummaryResponse{
-			SuppliedValue:   suppliedValue,
-			CollateralValue: collateralValue,
-			BorrowedValue:   borrowedValue,
-			BorrowLimit:     borrowLimit,
+			SuppliedValue:        suppliedValue,
+			CollateralValue:      collateralValue,
+			BorrowedValue:        borrowedValue,
+			BorrowLimit:          borrowLimit,
+			LiquidationThreshold: &liquidationThreshold,
 		}
 
 		if err == nil && !borrowedValue.IsZero() {
